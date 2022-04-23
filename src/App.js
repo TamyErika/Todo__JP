@@ -155,8 +155,6 @@ export default class App extends Component {
     }
   };
   render() {
-    console.log(this.state.todoList);
-    console.log(this.state.idTodo);
     return (
       <>
         <div className="row" style={{ margin: "100px" }}>
@@ -180,6 +178,3 @@ export default class App extends Component {
     );
   }
 }
-
-
-
