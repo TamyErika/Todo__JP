@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import FormTodos from "./components/FormTodos";
 import TableTodo from "./components/TableTodo";
+import axios from "axios";
 export default class App extends Component {
   constructor(props) {
     super(props);
@@ -13,6 +14,9 @@ export default class App extends Component {
       idTodo: undefined,
       todoStatus: "All",
       text: "",
+      mainTodo: [],
+      textStatus: "All",
+      isLoading: false,
     };
   }
 
@@ -25,78 +29,85 @@ export default class App extends Component {
     });
   };
   handleOnClick = (e) => {
-    var { todo, status, todoList, id, isUpdate, todoStatus } = this.state;
-    const newTodoList = localStorage.getItem("todoList")
-      ? JSON.parse(localStorage.getItem("todoList"))
-      : [];
+    var { todo, status, todoList, id, isUpdate, todoStatus, idTodo } =
+      this.state;
     if (!isUpdate) {
-      if (todoList.length !== 0) {
-        id = 2;
-        id = todoList[todoList.length - 1].id;
-        ++id;
-      } else {
-        ++id;
-      }
-      todoList.push({ id, todo, status });
-      this.setState({
-        todoList: todoList,
-        id,
-      });
-      localStorage.setItem("todoList", JSON.stringify(todoList));
-      this.clearState();
+      axios
+        .post("http://localhost:1234/todo/create", { todo, status })
+        .then((res) => {
+          const { statusCode, message } = res.data;
+          if (statusCode === 200) {
+            this.getAllTodos();
+            this.clearState();
+          }
+        });
     } else {
-      const { idTodo, todoList, todo, status } = this.state;
-      const findIndex = newTodoList.findIndex((todo) => todo.id === idTodo);
-      newTodoList.splice(findIndex, 1, { id: idTodo, todo, status });
-      this.setState({
-        todoList: newTodoList,
-        isUpdate: false,
-        status: true,
-      });
-      localStorage.setItem("todoList", JSON.stringify(newTodoList));
-      this.handleOnSearch(this.state.text);
-      this.clearState();
+      axios
+        .put(`http://localhost:1234/todo/update/${idTodo}`, { todo, status })
+        .then((res) => {
+          const { statusCode, message } = res.data;
+          if (statusCode === 200) {
+            console.log(message);
+            this.getAllTodos();
+            this.clearState();
+          }
+        })
+        .then(() => {
+          setTimeout(() => {
+            this.handleOnSearch(this.state.text, true);
+          }, 100);
+        });
     }
   };
+  getAllTodos = () => {
+    axios.get("http://localhost:1234/todo/get").then((res) => {
+      const { todos } = res.data;
+      this.setState({
+        todoList: todos,
+        mainTodo: todos,
+      });
+    });
+  };
   componentDidMount() {
-    const newTodoList = localStorage.getItem("todoList")
-      ? JSON.parse(localStorage.getItem("todoList"))
-      : [];
-    this.setState({
-      todoList: newTodoList,
-    });
+    this.getAllTodos();
   }
-  handleDeleteTodo = (id) => {
-    const newTodoList = JSON.parse(localStorage.getItem("todoList"));
-    const findIndex = newTodoList.findIndex(function (todo) {
-      return todo.id === id;
-    });
-    newTodoList.splice(findIndex, 1);
-    localStorage.setItem("todoList", JSON.stringify(newTodoList));
-    this.setState({
-      todoList: newTodoList,
-      idTodo: id,
-    });
-    this.handleOnSearch(this.state.text);
+  handleDeleteTodo = async (_id) => {
+    await axios
+      .delete(`http://localhost:1234/todo/delete/${_id}`)
+      .then((res) => {
+        const { statusCode } = res.data;
+        if (statusCode === 200) {
+          this.getAllTodos();
+          this.clearState();
+          this.setState({
+            isLoading: true,
+          });
+        }
+      });
+    setTimeout(() => {
+      this.handleOnSearch(this.state.text, true);
+      this.handleOnSelectFlowStatus(this.state.textStatus);
+      this.setState({
+        isLoading: false,
+      });
+    }, 200);
   };
-  handleUpdateStatus = (id) => {
-    const newTodoList = JSON.parse(localStorage.getItem("todoList"));
-    const findIndex = newTodoList.findIndex(function (todo) {
-      return todo.id === id;
+  handleUpdateStatus = (_id) => {
+    axios.put(`http://localhost:1234/todo/update/status/${_id}`).then((res) => {
+      const { statusCode, message } = res.data;
+      if (statusCode === 200) {
+        console.log(message);
+        this.getAllTodos();
+        this.clearState();
+      }
     });
-    newTodoList[findIndex].status = !newTodoList[findIndex].status;
-    localStorage.setItem("todoList", JSON.stringify(newTodoList));
-    this.setState({
-      todoList: newTodoList,
-    });
-    this.handleOnSearch(this.state.text);
   };
-  handleEditTodo = (todo, status, id) => {
+  handleEditTodo = (todo, status, _id) => {
     this.setState({
       isUpdate: true,
       todo,
       status,
-      idTodo: id,
+      idTodo: _id,
     });
   };
   clearState = () => {
@@ -106,30 +117,20 @@ export default class App extends Component {
     });
   };
 
-  handleOnSearch = (textSearch) => {
-    let { todoList } = this.state;
-    let newTodoList = localStorage.getItem("todoList")
-      ? JSON.parse(localStorage.getItem("todoList"))
-      : [];
-    todoList = newTodoList.filter((todo) =>
+  handleOnSearch = (textSearch, b) => {
+    let { todoList, mainTodo } = this.state;
+    todoList = mainTodo.filter((todo) =>
       todo.todo.toLowerCase().includes(textSearch.toLowerCase())
     );
-    if (todoList.length !== 0) {
-      this.setState({
-        todoList,
-        text: textSearch,
-      });
-    } else {
-      this.setState({
-        todoList,
-        text: textSearch,
-      });
-    }
+    this.setState({
+      todoList,
+      text: textSearch,
+    });
   };
   handleOnSelectFlowStatus = (status) => {
     if (status === "All") {
       status = "All";
-    } else if (status === "true") {
+    } else if (status === "true" || status === true) {
       status = true;
     } else {
       status = false;
@@ -137,24 +138,29 @@ export default class App extends Component {
     this.setState({
       todoStatus: status,
     });
-    let newTodoList = localStorage.getItem("todoList")
-      ? JSON.parse(localStorage.getItem("todoList"))
-      : [];
+    let newTodoList = [...this.state.mainTodo];
     if (status === "All") {
       this.setState({
         todoList: newTodoList,
+        textStatus: status,
       });
     } else {
       newTodoList = newTodoList.filter((todo) => {
+        console.log(todo);
+        console.log(status);
         return todo.status === status;
       });
       this.setState({
         todoList: newTodoList,
         todoStatus: status,
+        textStatus: status,
       });
     }
   };
   render() {
+    if (this.state.isLoading === true) {
+      return <h1>Is Loading, Plz wait minute</h1>;
+    }
     return (
       <>
         <div className="row" style={{ margin: "100px" }}>

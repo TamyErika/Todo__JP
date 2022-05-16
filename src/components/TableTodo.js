@@ -1,18 +1,18 @@
 import React, { Component } from "react";
 
 export default class TableTodo extends Component {
-  handleDeleteTodo = (id) => {
-    this.props.handleDeleteTodo(id);
+  handleDeleteTodo = (_id) => {
+    this.props.handleDeleteTodo(_id);
   };
-  handleUpdateStatus = (id) => {
-    this.props.handleUpdateStatus(id);
+  handleUpdateStatus = (_id) => {
+    this.props.handleUpdateStatus(_id);
   };
-  handleEditTodo = (todo, status, id) => {
-    this.props.handleEditTodo(todo, status, id);
+  handleEditTodo = (todo, status, _id) => {
+    this.props.handleEditTodo(todo, status, _id);
   };
   handleOnSearch = (e) => {
     const { value } = e.target;
-    this.props.handleOnSearch(value);
+    this.props.handleOnSearch(value, false);
   };
   handleOnSelectFlowStatus = (e) => {
     const { value } = e.target;
@@ -32,12 +32,12 @@ export default class TableTodo extends Component {
     const resultTodoList = todoList.map((todo, index) => {
       return (
         <tr key={index}>
-          <td>{index + 1}</td>
+          <td>{todo._id}</td>
           <td>{todo.todo}</td>
           <td>
             <span
               style={{ cursor: "pointer" }}
-              onClick={() => this.handleUpdateStatus(todo.id)}
+              onClick={() => this.handleUpdateStatus(todo._id)}
               className={`label label-${todo.status ? "success" : "danger"}`}
             >
               {todo.status === true ? "true" : "false"}
@@ -46,7 +46,7 @@ export default class TableTodo extends Component {
           <td>
             <button
               onClick={() =>
-                this.handleEditTodo(todo.todo, todo.status, todo.id)
+                this.handleEditTodo(todo.todo, todo.status, todo._id)
               }
               type="button"
               className="btn btn-success"
@@ -54,7 +54,7 @@ export default class TableTodo extends Component {
               EDIT
             </button>
             <button
-              onClick={() => this.handleDeleteTodo(todo.id)}
+              onClick={() => this.handleDeleteTodo(todo._id)}
               type="button"
               className="btn btn-danger"
             >
